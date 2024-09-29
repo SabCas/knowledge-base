@@ -60,12 +60,22 @@ docs = [
     Document(page_content="It provides several components such as Chains, Agents, Prompts, and Memory.")
 ]
 
-# Load the map-reduce summarization chain
-map_reduce_chain = load_summarize_chain(llm, chain_type="map_reduce")
+# Define custom prompts
+map_prompt = "Summarize the following text: {text}"
+combine_prompt = "Combine the following summaries into a cohesive paragraph: {summaries}"
+
+# Load the map-reduce summarization chain with custom prompts
+map_reduce_chain = load_summarize_chain(
+    llm,
+    chain_type="map_reduce",
+    map_prompt=map_prompt,
+    combine_prompt=combine_prompt
+)
 
 # Generate summary
 summary = map_reduce_chain.run(docs)
 print(summary)
+
 
 ```
 
