@@ -1,6 +1,6 @@
 # Overview
 
 ## Programing
-- [[artificial intelligence]]
+- [[artificial intelligence.md]]
 - [[web development]]
 
