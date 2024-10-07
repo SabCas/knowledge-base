@@ -1,5 +1,21 @@
 # Text Summarization
 
+
+## 5 Levels Of Summarization: Novice to Expert
+Summarization is a fundamental building block of many LLM tasks. You'll frequently run into use cases where you would like to distill a large body of text into a succinct set of points.
+
+Depending on the length of the text you'd like to summarize, you have different summarization methods to choose from.
+
+We're going to run through 5 methods for summarization that start with Novice and end up expert. These aren't the only options, feel free to make up your own. If you find another one you like please share it with the community.
+
+### 5 Levels Of Summarization:
+
+- Summarize a couple sentences - Basic Prompt
+- Summarize a couple paragraphs - Prompt Templates, Stuff-Method
+- Summarize a couple pages - Map Reduce/ Refine
+- Summarize an entire book - Best Representation Vectors
+- Summarize an unknown amount of text - Agents
+
 ## Summarization Strategies
 ### 1. Stuff Method
 In the Stuff method, all the input text is “stuffed” into the prompt in one go. The model processes the entire text at once to generate a summary. This is simple but only works well with shorter texts due to token limits.
@@ -125,6 +141,115 @@ refine_chain = load_summarize_chain(
 # Generate summary
 summary = refine_chain.run(docs)
 print(summary)
+
+
+```
+
+### Level 4: Best Representation Vectors - Summarize an entire book
+
+**The BRV Steps:**
+
+- Load your book into a single text file
+- Split your text into large-ish chunks
+- Embed your chunks to get vectors
+- Cluster the vectors to see which are similar to each other and likely talk about the same parts of the book
+- Pick embeddings that represent the cluster the most (method: closest to each cluster centroid)
+- Summarize the documents that these embeddings represent
+
+
+Example
+
+``` python
+from langchain.document_loaders import PyPDFLoader
+
+# Load the book
+loader = PyPDFLoader("../data/IntoThinAirBook.pdf")
+pages = loader.load()
+
+# Cut out the open and closing parts
+pages = pages[26:277]
+
+# Combine the pages, and replace the tabs with spaces
+text = ""
+for page in pages:
+    text += page.page_content   
+text = text.replace('\t', ' ')
+
+num_tokens = llm.get_num_tokens(text)
+print (f"This book has {num_tokens} tokens in it")
+```
+
+``` python
+
+from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import numpy as np
+from sklearn.cluster import KMeans
+from langchain.chat_models import ChatOpenAI
+from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.chains.summarize import load_summarize_chain
+# Perform K-means clustering
+kmeans = KMeans(n_clusters=num_clusters, random_state=42).fit(vectors)
+
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+
+# Taking out the warnings
+import warnings
+from warnings import simplefilter
+
+# Filter out FutureWarnings
+simplefilter(action='ignore', category=FutureWarning)
+
+text_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n", "\t"], chunk_size=10000, chunk_overlap=3000)
+
+docs = text_splitter.create_documents([text])
+
+num_documents = len(docs)
+
+print (f"Now our book is split up into {num_documents} documents")
+
+embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+vectors = embeddings.embed_documents([x.page_content for x in docs])
+
+# Assuming 'embeddings' is a list or array of 1536-dimensional embeddings
+
+# Choose the number of clusters, this can be adjusted based on the book's content.
+# I played around and found ~10 was the best.
+# Usually if you have 10 passages from a book you can tell what it's about
+num_clusters = 11
+
+# Perform t-SNE and reduce to 2 dimensions
+tsne = TSNE(n_components=2, random_state=42)
+reduced_data_tsne = tsne.fit_transform(vectors)
+
+# Plot the reduced data
+plt.scatter(reduced_data_tsne[:, 0], reduced_data_tsne[:, 1], c=kmeans.labels_)
+plt.xlabel('Dimension 1')
+plt.ylabel('Dimension 2')
+plt.title('Book Embeddings Clustered')
+plt.show()
+
+# Find the closest embeddings to the centroids
+
+# Create an empty list that will hold your closest points
+closest_indices = []
+
+# Loop through the number of clusters you have
+for i in range(num_clusters):
+    # Get the list of distances from that particular cluster center
+    distances = np.linalg.norm(vectors - kmeans.cluster_centers_[i], axis=1)
+
+    # Find the list position of the closest one (using argmin to find the smallest distance)
+    closest_index = np.argmin(distances)
+    # Append that position to your closest indices list
+    closest_indices.append(closest_index)
+
+selected_indices = sorted(closest_indices)
+selected_indices
+
+
 
 
 ```
